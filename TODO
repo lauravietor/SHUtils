@@ -1,0 +1,23 @@
+Design screens:
+- Hunts
+  - phases
+  - game
+  - SC, methods
+  - multiple species?
+  - search
+- Counters
+  - phase?
+  - select hunt
+- Shinies
+
+User data storage:
+- SQLite DB?
+  - Could also be used for encounters & pokemon DB
+  - Which crate?
+  - ORM?
+- CSV?
+
+Future:
+- Encounter calc/db
+  - Create hunt from encounter calc
+  - lookup available hunts for specie (incl. pre-evolution?)
