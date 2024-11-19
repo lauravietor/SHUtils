@@ -1,3 +1,4 @@
+use crate::State;
 use iced::widget::text;
 use iced::Element;
 
@@ -13,7 +14,7 @@ impl Encounters {
     pub fn new() -> Self {
         Self {}
     }
-    pub fn view(&self) -> Element<EncountersMessage> {
+    pub fn view(&self, _state: &State) -> Element<EncountersMessage> {
         text("Encounters screen").into()
     }
 }

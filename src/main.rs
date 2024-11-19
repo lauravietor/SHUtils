@@ -7,9 +7,22 @@ use screens::{
     Shinies, ShiniesMessage,
 };
 
+use std::path::PathBuf;
+
+use dirs;
+
+fn database_path() -> PathBuf {
+    if let Some(dir) = dirs::data_dir() {
+        [dir, "SHUtils".into(), "db.sqlite".into()].iter().collect()
+    } else {
+        PathBuf::from("db.sqlite")
+    }
+}
+
 mod hunt;
 mod pokemon;
 mod screens;
+mod shiny;
 
 fn main() -> iced::Result {
     iced::application("SHUtils", State::update, State::view).run_with(State::new)
@@ -39,20 +52,22 @@ enum Screen {
 }
 
 impl Screen {
-    fn view(&self) -> Element<Message> {
+    fn view(&self, state: &State) -> Element<Message> {
         match &self {
-            Screen::Counters(s) => s.view().map(Message::CountersMessage),
-            Screen::Hunts(s) => s.view().map(Message::HuntsMessage),
-            Screen::Shinies(s) => s.view().map(Message::ShiniesMessage),
-            Screen::Encounters(s) => s.view().map(Message::EncountersMessage),
+            Screen::Counters(s) => s.view(state).map(Message::CountersMessage),
+            Screen::Hunts(s) => s.view(state).map(Message::HuntsMessage),
+            Screen::Shinies(s) => s.view(state).map(Message::ShiniesMessage),
+            Screen::Encounters(s) => s.view(state).map(Message::EncountersMessage),
         }
     }
 }
 
-struct State {
+pub struct State {
     screen: Screen,
     show_menu: bool,
-    active_hunts: Vec<hunt::Hunt>,
+    pub active_hunts: Vec<hunt::Hunt>,
+    pub hunts: Vec<hunt::Hunt>,
+    pub shinies: Vec<pokemon::Pokemon>,
 }
 
 fn menu<'a>() -> Element<'a, MenuMessage>
@@ -80,6 +95,8 @@ impl State {
                 screen: Screen::Hunts(screens::Hunts::default()),
                 show_menu: false,
                 active_hunts: Vec::with_capacity(4),
+                hunts: Vec::new(),
+                shinies: Vec::new(),
             },
             Task::none(),
         )
@@ -123,7 +140,7 @@ impl State {
     fn view(&self) -> Element<Message> {
         let content = container(column![
             button("Menu").on_press(Message::MenuMessage(MenuMessage::Open)),
-            self.screen.view()
+            self.screen.view(self)
         ]);
         if self.show_menu {
             menu().map(Message::MenuMessage)

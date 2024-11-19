@@ -1,8 +1,11 @@
 use crate::hunt::Hunt;
 use crate::pokemon::{GameVersion, Pokemon};
-use iced::alignment::Horizontal;
-use iced::widget::{button, column, container, row, stack, text};
+use crate::State;
+use iced::alignment::{Horizontal, Vertical};
+use iced::widget::{button, column, container, row, stack, svg, text};
 use iced::{Element, Length};
+
+const COG_ICON: &[u8] = include_bytes!("../../assets/cog.svg");
 
 #[derive(Debug, Clone, Copy)]
 pub enum HuntsMessage {
@@ -38,8 +41,9 @@ impl Hunt {
                         .width(Length::Fill)
                         .spacing(8)
                     ]
-                    .spacing(8)
-                    .padding(16),
+                    .align_y(Vertical::Center)
+                    .spacing(16)
+                    .padding(8),
                     column![
                         make_row("Version :", "Émeraude"),
                         make_row("Méthode :", "Fuites"),
@@ -47,15 +51,23 @@ impl Hunt {
                         make_row("Débutée le", "19 Juillet 2005"),
                     ]
                     .spacing(12)
-                    .padding(16)
+                    .padding([8, 16])
                 ]
                 .spacing(8)
                 .padding(32)
             ),
-            button("Edit")
+            container(
+                button(
+                    svg::Svg::new(svg::Handle::from_memory(COG_ICON))
+                        .height(32)
+                        .width(32)
+                )
                 .height(32)
                 .width(32)
                 .on_press(HuntsMessage::EditHunt(id))
+            )
+            .width(Length::Fill)
+            .align_x(Horizontal::Right)
         ]
         .into()
     }
@@ -68,7 +80,7 @@ impl Hunts {
     pub fn new() -> Self {
         Self {}
     }
-    pub fn view(&self) -> Element<HuntsMessage> {
+    pub fn view(&self, _state: &State) -> Element<HuntsMessage> {
         Hunt {
             count: 3198,
             pokemon: Pokemon {
