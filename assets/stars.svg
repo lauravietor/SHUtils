@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" fill="white" stroke="none" viewBox="-1 -1 2 2" width="32" height="32">
+    <defs>
+        <path id="s" d="M0-1 a1 1 0 0 0 1 1 a1 1 0 0 0 -1 1 a1 1 0 0 0 -1 -1 a1 1 0 0 0 1 -1 z"/>
+    </defs>
+    <use href="#s" transform="scale(0.6)" x="0.5" y="0.5"/>
+    <use href="#s" transform="scale(0.4)" x="-1.2" y="-0.4"/>
+    <use href="#s" transform="scale(0.25)" x="0.5" y="-2.3"/>
+</svg>

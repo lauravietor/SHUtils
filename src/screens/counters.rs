@@ -1,4 +1,4 @@
-use crate::hunt::Hunt;
+use crate::models::Hunt;
 use crate::State;
 use iced::widget::text;
 use iced::Element;
@@ -11,7 +11,7 @@ pub enum CountersMessage {
     EditCounter(usize),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 struct Counter {
     hunt: Option<Hunt>,
     increment: u64,
@@ -23,7 +23,7 @@ impl Counter {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Counters {
     hunts: Vec<Counter>,
 }

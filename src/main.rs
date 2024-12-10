@@ -1,17 +1,40 @@
+use diesel::Connection;
+
 use iced::widget::{button, column, container, row, text};
-use iced::Element;
-use iced::Fill;
-use iced::Task;
+use iced::{Element, Fill, Task};
+
 use screens::{
     Counters, CountersMessage, Encounters, EncountersMessage, Hunts, HuntsMessage, ScreenType,
     Shinies, ShiniesMessage,
 };
 
+use std::error::Error;
+use std::fs;
 use std::path::PathBuf;
 
 use dirs;
 
-fn database_path() -> PathBuf {
+pub mod models;
+pub mod schema;
+
+mod screens;
+
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+fn run_migrations(
+    connection: &mut impl MigrationHarness<diesel::sqlite::Sqlite>,
+) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    // This will run the necessary migrations.
+    //
+    // See the documentation for `MigrationHarness` for
+    // all available methods.
+    connection.run_pending_migrations(MIGRATIONS)?;
+
+    Ok(())
+}
+
+fn get_database_path() -> PathBuf {
     if let Some(dir) = dirs::data_dir() {
         [dir, "SHUtils".into(), "db.sqlite".into()].iter().collect()
     } else {
@@ -19,13 +42,23 @@ fn database_path() -> PathBuf {
     }
 }
 
-mod hunt;
-mod pokemon;
-mod screens;
-mod shiny;
+pub fn establish_db_connection() -> diesel::SqliteConnection {
+    let database_url = get_database_path();
+    diesel::SqliteConnection::establish(database_url.to_str().unwrap())
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url.display()))
+}
 
 fn main() -> iced::Result {
-    iced::application("SHUtils", State::update, State::view).run_with(State::new)
+    if let Err(err) = fs::create_dir_all(get_database_path().parent().unwrap()) {
+        panic!("Creating database directory failed: {}", err);
+    }
+    iced::application("SHUtils", State::update, State::view).run_with(|| {
+        let (mut state, task) = State::new();
+        if let Err(err) = run_migrations(&mut state.db_connection) {
+            panic!("Database upgrade failed: {}", err)
+        };
+        (state, task)
+    })
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -65,9 +98,8 @@ impl Screen {
 pub struct State {
     screen: Screen,
     show_menu: bool,
-    pub active_hunts: Vec<hunt::Hunt>,
-    pub hunts: Vec<hunt::Hunt>,
-    pub shinies: Vec<pokemon::Pokemon>,
+    pub active_hunts: Vec<models::Hunt>,
+    pub db_connection: diesel::SqliteConnection,
 }
 
 fn menu<'a>() -> Element<'a, MenuMessage>
@@ -95,8 +127,7 @@ impl State {
                 screen: Screen::Hunts(screens::Hunts::default()),
                 show_menu: false,
                 active_hunts: Vec::with_capacity(4),
-                hunts: Vec::new(),
-                shinies: Vec::new(),
+                db_connection: establish_db_connection(),
             },
             Task::none(),
         )

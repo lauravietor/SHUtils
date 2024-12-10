@@ -1,21 +1,21 @@
-use crate::hunt::Hunt;
-use crate::pokemon::{GameVersion, Pokemon};
+use crate::models::Hunt;
 use crate::State;
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{button, column, container, row, stack, svg, text};
 use iced::{Element, Length};
 
 const COG_ICON: &[u8] = include_bytes!("../../assets/cog.svg");
+const STARS_ICON: &[u8] = include_bytes!("../../assets/stars.svg");
 
 #[derive(Debug, Clone, Copy)]
 pub enum HuntsMessage {
     CreateHunt,
     DeleteHunt(usize),
-    EditHunt(usize),
+    BeginEditHunt(usize),
 }
 
 impl Hunt {
-    pub fn view_details(&self, id: usize) -> Element<HuntsMessage> {
+    pub fn view_card(&self, id: usize) -> Element<HuntsMessage> {
         let make_row = |label, value| {
             row![
                 text(label)
@@ -35,7 +35,7 @@ impl Hunt {
                             .align_right(Length::Fill),
                         column![
                             text("Mew").size(20),
-                            text(self.count).size(24),
+                            text(self.phase_encounters).size(24),
                             text("Phase 1").size(16)
                         ]
                         .width(Length::Fill)
@@ -64,12 +64,24 @@ impl Hunt {
                 )
                 .height(32)
                 .width(32)
-                .on_press(HuntsMessage::EditHunt(id))
+                .on_press(HuntsMessage::BeginEditHunt(id))
             )
             .width(Length::Fill)
             .align_x(Horizontal::Right)
         ]
         .into()
+    }
+
+    pub fn view_counter(&self, id: usize) -> Element<HuntsMessage> {
+        container(text("counter")).into()
+    }
+
+    pub fn view_detailed(&self, id: usize) -> Element<HuntsMessage> {
+        container(text("detailed")).into()
+    }
+
+    pub fn view_editing(&self, id: usize) -> Element<HuntsMessage> {
+        container(text("editing")).into()
     }
 }
 
@@ -81,13 +93,6 @@ impl Hunts {
         Self {}
     }
     pub fn view(&self, _state: &State) -> Element<HuntsMessage> {
-        Hunt {
-            count: 3198,
-            pokemon: Pokemon {
-                species: 151,
-                version: GameVersion::Emerald,
-            },
-        }
-        .view_details(0)
+        text("WIP").into()
     }
 }
