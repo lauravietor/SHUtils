@@ -1,23 +1,20 @@
-Design screens:
-- Hunts
-  - phases
-  - game
-  - SC, methods
-  - multiple species?
-  - search
-- Counters
-  - phase?
-  - select hunt
-- Shinies
-
-User data storage:
-- SQLite DB?
-  - Could also be used for encounters & pokemon DB
-  - Which crate?
-  - ORM?
-- CSV?
+Implement views for hunts, shinies, counters:
+- Hunts:
+  - [x] Hunt card for list view
+  - [ ] Hunt details for side view
+  - [ ] Hunt editing view
+  - [ ] Hunt creation view
+- Shinies:
+  - [ ] Shiny card for list view
+  - [ ] Shiny detail for side view
+  - [ ] Shiny editing view
+  - [ ] Shiny creation view
+  - [ ] Shiny creation modal for counters screen
+- Counters:
+  - [ ] Counter card with buttons
+  - [ ] Modal for counter editing
 
 Future:
 - Encounter calc/db
   - Create hunt from encounter calc
-  - lookup available hunts for specie (incl. pre-evolution?)
+  - lookup available hunts for species (incl. pre-evolution?)

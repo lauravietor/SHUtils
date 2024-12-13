@@ -1,34 +1,34 @@
-use diesel::Connection;
+use std::error::Error;
+use std::fs;
+use std::path::PathBuf;
 
 use iced::widget::{button, column, container, row, text};
 use iced::{Element, Fill, Task};
+
+use diesel::Connection;
+
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
+use dirs;
 
 use screens::{
     Counters, CountersMessage, Encounters, EncountersMessage, Hunts, HuntsMessage, ScreenType,
     Shinies, ShiniesMessage,
 };
 
-use std::error::Error;
-use std::fs;
-use std::path::PathBuf;
-
-use dirs;
-
+pub mod data;
+pub mod hunt;
 pub mod models;
 pub mod schema;
+pub mod shiny;
 
 mod screens;
 
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 fn run_migrations(
     connection: &mut impl MigrationHarness<diesel::sqlite::Sqlite>,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    // This will run the necessary migrations.
-    //
-    // See the documentation for `MigrationHarness` for
-    // all available methods.
     connection.run_pending_migrations(MIGRATIONS)?;
 
     Ok(())
@@ -42,7 +42,7 @@ fn get_database_path() -> PathBuf {
     }
 }
 
-pub fn establish_db_connection() -> diesel::SqliteConnection {
+fn establish_db_connection() -> diesel::SqliteConnection {
     let database_url = get_database_path();
     diesel::SqliteConnection::establish(database_url.to_str().unwrap())
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url.display()))
@@ -85,7 +85,7 @@ enum Screen {
 }
 
 impl Screen {
-    fn view(&self, state: &State) -> Element<Message> {
+    fn view<'a>(&'a self, state: &'a State) -> Element<Message> {
         match &self {
             Screen::Counters(s) => s.view(state).map(Message::CountersMessage),
             Screen::Hunts(s) => s.view(state).map(Message::HuntsMessage),
@@ -98,8 +98,10 @@ impl Screen {
 pub struct State {
     screen: Screen,
     show_menu: bool,
-    pub active_hunts: Vec<models::Hunt>,
+    pub active_hunts: Vec<hunt::Hunt>,
     pub db_connection: diesel::SqliteConnection,
+    pub all_hunts: Vec<hunt::Hunt>,
+    pub all_shinies: Vec<shiny::Shiny>,
 }
 
 fn menu<'a>() -> Element<'a, MenuMessage>
@@ -122,12 +124,19 @@ where
 
 impl State {
     fn new() -> (Self, Task<Message>) {
+        let mut db_connection = establish_db_connection();
+
+        let all_hunts = hunt::Hunt::get_all(&mut db_connection).expect("Failed to load hunts!");
+        let all_shinies =
+            shiny::Shiny::get_all(&mut db_connection).expect("Failed to load shinies!");
         (
             Self {
                 screen: Screen::Hunts(screens::Hunts::default()),
                 show_menu: false,
                 active_hunts: Vec::with_capacity(4),
-                db_connection: establish_db_connection(),
+                db_connection,
+                all_hunts,
+                all_shinies,
             },
             Task::none(),
         )

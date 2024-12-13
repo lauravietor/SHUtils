@@ -3,6 +3,7 @@
 diesel::table! {
     hunts (id) {
         id -> Integer,
+        target -> Integer,
         total_encounters -> Integer,
         phase_encounters -> Integer,
         phase_count -> Integer,
@@ -32,4 +33,7 @@ diesel::table! {
 
 diesel::joinable!(shinies -> hunts (hunt_id));
 
-diesel::allow_tables_to_appear_in_same_query!(hunts, shinies,);
+diesel::allow_tables_to_appear_in_same_query!(
+    hunts,
+    shinies,
+);

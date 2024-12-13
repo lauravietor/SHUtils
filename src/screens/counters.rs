@@ -1,8 +1,9 @@
-use crate::models::Hunt;
+use crate::hunt::Hunt;
 use crate::State;
 use iced::widget::text;
 use iced::Element;
-use std::vec::Vec;
+
+const STARS_ICON: &[u8] = include_bytes!("../../assets/stars.svg");
 
 #[derive(Debug, Clone, Copy)]
 pub enum CountersMessage {
@@ -11,7 +12,6 @@ pub enum CountersMessage {
     EditCounter(usize),
 }
 
-#[derive(Debug)]
 struct Counter {
     hunt: Option<Hunt>,
     increment: u64,
@@ -23,14 +23,11 @@ impl Counter {
     }
 }
 
-#[derive(Debug)]
-pub struct Counters {
-    hunts: Vec<Counter>,
-}
+pub struct Counters {}
 
 impl Counters {
     pub fn new() -> Self {
-        Self { hunts: Vec::new() }
+        Self {}
     }
     pub fn view(&self, _state: &State) -> Element<CountersMessage> {
         text("Counters screen").into()

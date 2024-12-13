@@ -1,5 +1,6 @@
 CREATE TABLE hunts (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    target INTEGER NOT NULL,
     total_encounters INTEGER NOT NULL,
     phase_encounters INTEGER NOT NULL,
     phase_count INTEGER NOT NULL,
