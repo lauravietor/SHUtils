@@ -7,15 +7,20 @@ use std::error::Error;
 
 pub use crate::models::Shiny as DbShiny;
 
+#[derive(Debug)]
 pub struct Shiny {
     pub id: i32,
     pub species: i32,
+    pub gender: Option<i32>,
+    pub name: Option<String>,
     pub total_encounters: Option<i32>,
     pub phase_encounters: Option<i32>,
     pub phase_number: Option<i32>,
     pub found_time: Option<DateTime<Local>>,
+    pub version: Option<String>,
+    pub method: Option<String>,
+    pub place: Option<String>,
     pub notes: Option<String>,
-    pub gender: Option<i32>,
     pub hunt_id: Option<i32>,
 }
 
@@ -24,14 +29,18 @@ impl Shiny {
         Self {
             id: db_shiny.id,
             species: db_shiny.species,
+            gender: db_shiny.gender,
+            name: db_shiny.name,
             total_encounters: db_shiny.total_encounters,
             phase_encounters: db_shiny.phase_encounters,
             phase_number: db_shiny.phase_number,
             found_time: db_shiny
                 .found_time
                 .map(|ndt| Local.from_local_datetime(&ndt).unwrap()),
+            version: db_shiny.version,
+            method: db_shiny.method,
+            place: db_shiny.place,
             notes: db_shiny.notes,
-            gender: db_shiny.gender,
             hunt_id: db_shiny.hunt_id,
         }
     }

@@ -4,7 +4,7 @@ diesel::table! {
     hunts (id) {
         id -> Integer,
         target -> Integer,
-        total_encounters -> Integer,
+        previous_encounters -> Integer,
         phase_encounters -> Integer,
         phase_count -> Integer,
         start_time -> Nullable<Timestamp>,
@@ -21,12 +21,16 @@ diesel::table! {
     shinies (id) {
         id -> Integer,
         species -> Integer,
+        gender -> Nullable<Integer>,
+        name -> Nullable<Text>,
         total_encounters -> Nullable<Integer>,
         phase_encounters -> Nullable<Integer>,
         phase_number -> Nullable<Integer>,
         found_time -> Nullable<Timestamp>,
+        version -> Nullable<Text>,
+        method -> Nullable<Text>,
+        place -> Nullable<Text>,
         notes -> Nullable<Text>,
-        gender -> Nullable<Integer>,
         hunt_id -> Nullable<Integer>,
     }
 }

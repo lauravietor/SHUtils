@@ -1,17 +1,17 @@
 Implement views for hunts, shinies, counters:
 - Hunts:
   - [x] Hunt card for list view
-  - [ ] Hunt details for side view
+  - [x] Hunt details for side view
   - [ ] Hunt editing view
-  - [ ] Hunt creation view
+  - [ ] Hunt creation modal
 - Shinies:
-  - [ ] Shiny card for list view
-  - [ ] Shiny detail for side view
+  - [x] Shiny card for list view
+  - [x] Shiny detail for side view
   - [ ] Shiny editing view
-  - [ ] Shiny creation view
+  - [ ] Shiny creation modal for shinies screen
   - [ ] Shiny creation modal for counters screen
 - Counters:
-  - [ ] Counter card with buttons
+  - [x] Counter card with buttons
   - [ ] Modal for counter editing
 
 Future:

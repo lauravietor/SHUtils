@@ -11,11 +11,14 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use dirs;
 
+use screens::counters::CountersAction;
+use screens::shinies::ShiniesAction;
 use screens::{
-    Counters, CountersMessage, Encounters, EncountersMessage, Hunts, HuntsMessage, ScreenType,
-    Shinies, ShiniesMessage,
+    Counters, CountersMessage, Hunts, HuntsAction, HuntsMessage, ScreenType, Shinies,
+    ShiniesMessage,
 };
 
+pub mod counter;
 pub mod data;
 pub mod hunt;
 pub mod models;
@@ -63,17 +66,18 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone, Copy)]
 enum Message {
+    HuntSaved(usize),
+    ShinySaved(usize),
+    HuntDeleted(usize),
+    ShinyDeleted(usize),
     MenuMessage(MenuMessage),
     CountersMessage(CountersMessage),
     HuntsMessage(HuntsMessage),
-    EncountersMessage(EncountersMessage),
     ShiniesMessage(ShiniesMessage),
 }
 
 #[derive(Debug, Clone, Copy)]
 enum MenuMessage {
-    Open,
-    Close,
     ChangeScreen(ScreenType),
 }
 
@@ -81,7 +85,6 @@ enum Screen {
     Counters(Counters),
     Hunts(Hunts),
     Shinies(Shinies),
-    Encounters(Encounters),
 }
 
 impl Screen {
@@ -90,18 +93,21 @@ impl Screen {
             Screen::Counters(s) => s.view(state).map(Message::CountersMessage),
             Screen::Hunts(s) => s.view(state).map(Message::HuntsMessage),
             Screen::Shinies(s) => s.view(state).map(Message::ShiniesMessage),
-            Screen::Encounters(s) => s.view(state).map(Message::EncountersMessage),
         }
     }
 }
 
 pub struct State {
     screen: Screen,
-    show_menu: bool,
-    pub active_hunts: Vec<hunt::Hunt>,
+    pub active_counters: [crate::counter::Counter; 4],
     pub db_connection: diesel::SqliteConnection,
     pub all_hunts: Vec<hunt::Hunt>,
     pub all_shinies: Vec<shiny::Shiny>,
+    pub selected_hunt: Option<usize>,
+    pub selected_shiny: Option<usize>,
+    editing_counter: Option<usize>,
+    editing_hunt: Option<hunt::Hunt>,
+    editing_shiny: Option<shiny::Shiny>,
 }
 
 fn menu<'a>() -> Element<'a, MenuMessage>
@@ -109,12 +115,11 @@ where
     MenuMessage: 'a,
 {
     column![
-        row![text("Menu"), button("x").on_press(MenuMessage::Close)],
+        text("Menu"),
         column![
             button("Hunts").on_press(MenuMessage::ChangeScreen(ScreenType::Hunts)),
             button("Shinies").on_press(MenuMessage::ChangeScreen(ScreenType::Shinies)),
             button("Counters").on_press(MenuMessage::ChangeScreen(ScreenType::Counters)),
-            button("Encounters").on_press(MenuMessage::ChangeScreen(ScreenType::Encounters)),
         ]
     ]
     .height(Fill)
@@ -131,61 +136,122 @@ impl State {
             shiny::Shiny::get_all(&mut db_connection).expect("Failed to load shinies!");
         (
             Self {
-                screen: Screen::Hunts(screens::Hunts::default()),
-                show_menu: false,
-                active_hunts: Vec::with_capacity(4),
+                screen: Screen::Counters(screens::Counters::default()),
+                active_counters: Default::default(),
                 db_connection,
                 all_hunts,
                 all_shinies,
+                selected_hunt: None,
+                selected_shiny: None,
+                editing_counter: None,
+                editing_hunt: None,
+                editing_shiny: None,
             },
             Task::none(),
         )
     }
 
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::MenuMessage(msg) => match msg {
-                MenuMessage::Open => self.show_menu = true,
-                MenuMessage::Close => self.show_menu = false,
                 MenuMessage::ChangeScreen(screen_type) => match screen_type {
                     screens::ScreenType::Counters => {
                         let counters = screens::Counters::new();
                         self.screen = Screen::Counters(counters);
-                        self.show_menu = false
+                        Task::none()
                     }
                     screens::ScreenType::Hunts => {
                         let hunts = screens::Hunts::new();
                         self.screen = Screen::Hunts(hunts);
-                        self.show_menu = false
+                        Task::none()
                     }
                     screens::ScreenType::Shinies => {
                         let shinies = screens::Shinies::new();
                         self.screen = Screen::Shinies(shinies);
-                        self.show_menu = false
-                    }
-                    screens::ScreenType::Encounters => {
-                        let encounters = screens::Encounters::new();
-                        self.screen = Screen::Encounters(encounters);
-                        self.show_menu = false
+                        Task::none()
                     }
                 },
             },
-            Message::CountersMessage(_msg) => (),
-            Message::HuntsMessage(_msg) => (),
-            Message::EncountersMessage(_msg) => (),
-            Message::ShiniesMessage(_msg) => (),
+            Message::CountersMessage(msg) => {
+                if let Screen::Counters(screen) = &mut self.screen {
+                    let action = screen.update(msg);
+
+                    match action {
+                        CountersAction::Increment(id) => {
+                            let c = &mut self.active_counters[id];
+                            if let Some(index) = c.hunt {
+                                c.increment(self.all_hunts.get_mut(index));
+                            } else {
+                                c.increment(None);
+                            }
+                            Task::none()
+                        }
+                        CountersAction::Decrement(id) => {
+                            let c = &mut self.active_counters[id];
+                            if let Some(index) = c.hunt {
+                                c.decrement(self.all_hunts.get_mut(index));
+                            } else {
+                                c.decrement(None);
+                            }
+                            Task::none()
+                        }
+                        CountersAction::EditCounter(id, edit_action) => {
+                            let c = &mut self.active_counters[id];
+                            if let Some(index) = c.hunt {
+                                c.perform(edit_action, self.all_hunts.get_mut(index));
+                            } else {
+                                c.perform(edit_action, None);
+                            }
+                            Task::none()
+                        }
+                        _ => Task::none(),
+                    }
+                } else {
+                    Task::none()
+                }
+            }
+            Message::HuntsMessage(msg) => {
+                if let Screen::Hunts(screen) = &mut self.screen {
+                    let action = screen.update(msg);
+
+                    match action {
+                        HuntsAction::SelectHunt(index) => {
+                            self.selected_hunt = Some(index);
+                        }
+                        HuntsAction::CloseSelectedHunt => {
+                            self.selected_hunt = None;
+                        }
+                        _ => {}
+                    }
+                    Task::none()
+                } else {
+                    Task::none()
+                }
+            }
+            Message::ShiniesMessage(msg) => {
+                if let Screen::Shinies(screen) = &mut self.screen {
+                    let action = screen.update(msg);
+
+                    match action {
+                        ShiniesAction::SelectShiny(index) => {
+                            self.selected_shiny = Some(index);
+                        }
+                        ShiniesAction::CloseSelectedShiny => {
+                            self.selected_shiny = None;
+                        }
+                        _ => {}
+                    }
+                    Task::none()
+                } else {
+                    Task::none()
+                }
+            }
+            _ => Task::none(),
         }
     }
 
     fn view(&self) -> Element<Message> {
-        let content = container(column![
-            button("Menu").on_press(Message::MenuMessage(MenuMessage::Open)),
-            self.screen.view(self)
-        ]);
-        if self.show_menu {
-            menu().map(Message::MenuMessage)
-        } else {
-            content.into()
-        }
+        let content = container(self.screen.view(self));
+        row![menu().map(Message::MenuMessage), content].into()
     }
 }

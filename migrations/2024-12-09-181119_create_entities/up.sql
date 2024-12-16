@@ -1,7 +1,7 @@
 CREATE TABLE hunts (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     target INTEGER NOT NULL,
-    total_encounters INTEGER NOT NULL,
+    previous_encounters INTEGER NOT NULL,
     phase_encounters INTEGER NOT NULL,
     phase_count INTEGER NOT NULL,
     start_time TIMESTAMP,
@@ -16,11 +16,15 @@ CREATE TABLE hunts (
 CREATE TABLE shinies (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     species INTEGER NOT NULL,
+    gender INTEGER,
+    name TEXT,
     total_encounters INTEGER,
     phase_encounters INTEGER,
     phase_number INTEGER,
     found_time TIMESTAMP,
+    version TEXT,
+    method TEXT,
+    place TEXT,
     notes TEXT,
-    gender INTEGER,
     hunt_id INTEGER REFERENCES hunts(id)
 );
