@@ -4,14 +4,14 @@ use crate::shiny::Shiny;
 
 use crate::schema::hunts;
 
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use diesel::prelude::*;
 
 use std::error::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Hunt {
-    pub id: i32,
+    pub id: Option<i32>,
     pub target: data::Species,
     pub previous_encounters: i32,
     pub phase_encounters: i32,
@@ -26,10 +26,27 @@ pub struct Hunt {
     pub shinies: Vec<Shiny>,
 }
 
+#[derive(Debug, AsChangeset, Identifiable, Insertable)]
+#[diesel(table_name = crate::schema::hunts)]
+pub struct InsertableHunt {
+    pub id: Option<i32>,
+    pub target: i32,
+    pub previous_encounters: i32,
+    pub phase_encounters: i32,
+    pub phase_count: i32,
+    pub start_time: Option<NaiveDateTime>,
+    pub end_time: Option<NaiveDateTime>,
+    pub completed: bool,
+    pub version: Option<String>,
+    pub method: Option<String>,
+    pub place: Option<String>,
+    pub notes: Option<String>,
+}
+
 impl Hunt {
     pub fn from_db_hunt_and_shinies(db_hunt: DbHunt, db_shinies: Vec<DbShiny>) -> Self {
         Self {
-            id: db_hunt.id,
+            id: Some(db_hunt.id),
             target: db_hunt.target.into(),
             previous_encounters: db_hunt.previous_encounters,
             phase_encounters: db_hunt.phase_encounters,
@@ -52,9 +69,9 @@ impl Hunt {
         }
     }
 
-    pub fn copy_into_db_hunt(&self) -> DbHunt {
-        DbHunt {
-            id: self.id,
+    pub fn copy_into_insertable(&self) -> InsertableHunt {
+        InsertableHunt {
+            id: self.id.clone(),
             target: self.target.into(),
             previous_encounters: self.previous_encounters,
             phase_encounters: self.phase_encounters,

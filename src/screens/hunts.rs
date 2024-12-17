@@ -1,22 +1,33 @@
+use crate::data::Species;
 use crate::hunt::Hunt;
 use crate::State;
 
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{
     button, column, container, horizontal_space, mouse_area, responsive, row, scrollable, stack,
-    svg, text, Container,
+    svg, text, text_input, Container,
 };
 use iced::{Element, Length, Pixels, Size};
 
 const COG_ICON: &[u8] = include_bytes!("../../assets/cog.svg");
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum HuntsMessage {
     CreateHunt,
     DeleteHunt(usize),
     SelectHunt(usize),
     CloseSelectedHunt,
     StartEditHunt(usize),
+    EditTarget(Species),
+    EditTotalEncounterCount(String),
+    EditPhaseEncounterCount(String),
+    EditPhaseCount(String),
+    EditCompleted(bool),
+    EditVersion(String),
+    EditMethod(String),
+    EditPlace(String),
+    EditNotes(String),
+    StopEditHunt(bool),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -26,7 +37,8 @@ pub enum HuntsAction {
     DeleteHunt(usize),
     SelectHunt(usize),
     CloseSelectedHunt,
-    BeginEditHunt(usize),
+    StartEditHunt(usize),
+    StopEditHunt(bool),
 }
 
 fn make_row<'a>(
@@ -117,6 +129,7 @@ impl Hunt {
         container(
             column![
                 row![
+                    horizontal_space(),
                     button("Modifier").on_press(HuntsMessage::StartEditHunt(index)),
                     button("Fermer").on_press(HuntsMessage::CloseSelectedHunt)
                 ],
@@ -168,7 +181,89 @@ impl Hunt {
     }
 
     pub fn view_editing(&self) -> Container<HuntsMessage> {
-        container(text("editing")).into()
+        container(
+            column![
+                row![
+                    horizontal_space(),
+                    button("Enregistrer").on_press(HuntsMessage::StopEditHunt(true)),
+                    button("Annuler").on_press(HuntsMessage::StopEditHunt(false))
+                ],
+                container(text("sprite here").width(100).height(100))
+                    .width(Length::Fill)
+                    .align_x(Horizontal::Center),
+                make_row("Espèce :", self.target.to_string(), 16),
+                row![
+                    text("Rencontres (phase) :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input("", &self.phase_encounters.to_string())
+                        .size(16)
+                        .on_input(HuntsMessage::EditPhaseEncounterCount)
+                ],
+                row![
+                    text("Rencontres (total) :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input(
+                        "",
+                        &(self.phase_encounters + self.previous_encounters).to_string()
+                    )
+                    .size(16)
+                    .on_input(HuntsMessage::EditTotalEncounterCount)
+                ],
+                row![
+                    text("Phase actuelle :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input("", &self.phase_count.to_string())
+                        .size(16)
+                        .on_input(HuntsMessage::EditPhaseCount)
+                ],
+                row![
+                    text("Version :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input("", &self.version.clone().unwrap_or("".into()))
+                        .size(16)
+                        .on_input(HuntsMessage::EditVersion)
+                ],
+                row![
+                    text("Méthode :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input("", &self.method.clone().unwrap_or("".into()))
+                        .size(16)
+                        .on_input(HuntsMessage::EditMethod)
+                ],
+                row![
+                    text("Zone :")
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Right),
+                    text_input("", &self.method.clone().unwrap_or("".into()))
+                        .size(16)
+                        .on_input(HuntsMessage::EditMethod)
+                ],
+                make_row(
+                    "Débutée le",
+                    self.start_time
+                        .map(|dt| dt
+                            .format_localized("%-d %B %Y", chrono::Locale::fr_FR)
+                            .to_string())
+                        .unwrap_or("Inconnue".into()),
+                    16
+                ),
+                column![text("Notes"), text(self.notes.clone().unwrap_or("".into())),],
+            ]
+            .spacing(12)
+            .padding(16),
+        )
+        .width(Length::Fill)
     }
 }
 
@@ -184,6 +279,8 @@ impl Hunts {
         match message {
             HuntsMessage::SelectHunt(id) => HuntsAction::SelectHunt(id),
             HuntsMessage::CloseSelectedHunt => HuntsAction::CloseSelectedHunt,
+            HuntsMessage::StartEditHunt(id) => HuntsAction::StartEditHunt(id),
+            HuntsMessage::StopEditHunt(save) => HuntsAction::StopEditHunt(save),
             _ => HuntsAction::None,
         }
     }
@@ -221,8 +318,34 @@ impl Hunts {
             .into()
         };
 
-        let content = match state.selected_hunt {
-            Some(index) => state
+        let content = if let Some(index) = state.editing_hunt_index {
+            state
+                .all_hunts
+                .get(index)
+                .map(|hunt| {
+                    container(row![
+                        scrollable(
+                            column(
+                                state
+                                    .all_hunts
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(index, hunt)| hunt.view_card(index).into())
+                            )
+                            .spacing(20)
+                            .padding(40)
+                        ),
+                        scrollable(hunt.view_editing())
+                    ])
+                    .width(Length::Fill)
+                })
+                .unwrap_or(
+                    container(responsive(build_columns))
+                        .height(Length::Fill)
+                        .width(Length::Fill),
+                )
+        } else if let Some(index) = state.selected_hunt {
+            state
                 .all_hunts
                 .get(index)
                 .map(|hunt| {
@@ -246,10 +369,11 @@ impl Hunts {
                     container(responsive(build_columns))
                         .height(Length::Fill)
                         .width(Length::Fill),
-                ),
-            None => container(responsive(build_columns))
+                )
+        } else {
+            container(responsive(build_columns))
                 .height(Length::Fill)
-                .width(Length::Fill),
+                .width(Length::Fill)
         };
 
         column![header, content].into()

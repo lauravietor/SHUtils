@@ -102,8 +102,10 @@ pub struct State {
     pub selected_hunt: Option<usize>,
     pub selected_shiny: Option<usize>,
     editing_counter: Option<usize>,
-    editing_hunt: Option<hunt::Hunt>,
-    editing_shiny: Option<shiny::Shiny>,
+    pub editing_hunt: hunt::Hunt,
+    pub editing_hunt_index: Option<usize>,
+    pub editing_shiny: shiny::Shiny,
+    pub editing_shiny_index: Option<usize>,
 }
 
 fn menu<'a>() -> Element<'a, MenuMessage>
@@ -124,25 +126,91 @@ where
 }
 
 impl State {
-    fn insert_or_update_db_hunt(&mut self, index: usize) {
+    fn db_upsert_hunt_by_index(&mut self, index: usize) -> Result<hunt::Hunt, ()> {
+        use crate::schema::hunts::dsl::*;
+
         if let Some(hunt) = self.all_hunts.get(index) {
-            let _result = diesel::update(schema::hunts::table)
-                .set(hunt.copy_into_db_hunt())
-                .execute(&mut self.db_connection);
+            let insertable = hunt.copy_into_insertable();
+            let result = diesel::insert_into(hunts)
+                .values(&insertable)
+                .on_conflict(id)
+                .do_update()
+                .set(&insertable)
+                .get_result::<models::Hunt>(&mut self.db_connection);
+            if let Ok(db_hunt) = result {
+                match hunt::Hunt::get_by_id(db_hunt.id, &mut self.db_connection) {
+                    Ok(hunt) => Ok(hunt),
+                    Err(_) => Err(()),
+                }
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
         }
     }
 
-    fn delete_hunt(&mut self, index: usize) {}
+    fn db_upsert_edited_hunt(&mut self) -> Result<hunt::Hunt, ()> {
+        use crate::schema::hunts::dsl::*;
 
-    fn insert_or_update_db_shiny(&mut self, index: usize) {
+        let insertable = self.editing_hunt.copy_into_insertable();
+        let result = diesel::insert_into(hunts)
+            .values(&insertable)
+            .on_conflict(id)
+            .do_update()
+            .set(&insertable)
+            .get_result::<models::Hunt>(&mut self.db_connection);
+        if let Ok(db_hunt) = result {
+            match hunt::Hunt::get_by_id(db_hunt.id, &mut self.db_connection) {
+                Ok(hunt) => Ok(hunt),
+                Err(_) => Err(()),
+            }
+        } else {
+            Err(())
+        }
+    }
+
+    fn db_delete_hunt(&mut self, index: usize) {}
+
+    fn db_upsert_shiny_by_index(&mut self, index: usize) -> Result<shiny::Shiny, ()> {
+        use crate::schema::shinies::dsl::*;
+
         if let Some(shiny) = self.all_shinies.get(index) {
-            let _result = diesel::update(schema::shinies::table)
-                .set(shiny.copy_into_db_shiny())
-                .execute(&mut self.db_connection);
+            let insertable = shiny.copy_into_insertable();
+            let result = diesel::insert_into(shinies)
+                .values(&insertable)
+                .on_conflict(id)
+                .do_update()
+                .set(&insertable)
+                .get_result(&mut self.db_connection);
+            if let Ok(db_shiny) = result {
+                Ok(shiny::Shiny::from_db_shiny(db_shiny))
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
         }
     }
 
-    fn delete_shiny(&mut self, index: usize) {}
+    fn db_upsert_edited_shiny(&mut self) -> Result<shiny::Shiny, ()> {
+        use crate::schema::shinies::dsl::*;
+
+        let insertable = self.editing_shiny.copy_into_insertable();
+        let result = diesel::insert_into(shinies)
+            .values(&insertable)
+            .on_conflict(id)
+            .do_update()
+            .set(&insertable)
+            .get_result(&mut self.db_connection);
+        if let Ok(db_shiny) = result {
+            Ok(shiny::Shiny::from_db_shiny(db_shiny))
+        } else {
+            Err(())
+        }
+    }
+
+    fn db_delete_shiny(&mut self, index: usize) {}
 
     fn new() -> (Self, Task<Message>) {
         let mut db_connection = establish_db_connection();
@@ -160,8 +228,10 @@ impl State {
                 selected_hunt: None,
                 selected_shiny: None,
                 editing_counter: None,
-                editing_hunt: None,
-                editing_shiny: None,
+                editing_hunt: hunt::Hunt::default(),
+                editing_hunt_index: None,
+                editing_shiny: shiny::Shiny::default(),
+                editing_shiny_index: None,
             },
             Task::none(),
         )
@@ -197,7 +267,7 @@ impl State {
                             let c = &mut self.active_counters[id];
                             if let Some(index) = c.hunt {
                                 c.increment(self.all_hunts.get_mut(index));
-                                self.insert_or_update_db_hunt(index);
+                                let _ = self.db_upsert_hunt_by_index(index);
                             } else {
                                 c.increment(None);
                             }
@@ -207,7 +277,7 @@ impl State {
                             let c = &mut self.active_counters[id];
                             if let Some(index) = c.hunt {
                                 c.decrement(self.all_hunts.get_mut(index));
-                                self.insert_or_update_db_hunt(index);
+                                let _ = self.db_upsert_hunt_by_index(index);
                             } else {
                                 c.decrement(None);
                             }
@@ -218,7 +288,7 @@ impl State {
                                 let c = &mut self.active_counters[id];
                                 if let Some(index) = c.hunt {
                                     c.perform(edit_action, self.all_hunts.get_mut(index));
-                                    self.insert_or_update_db_hunt(index);
+                                    let _ = self.db_upsert_hunt_by_index(index);
                                 } else {
                                     c.perform(edit_action, None);
                                 }
@@ -249,6 +319,25 @@ impl State {
                         }
                         HuntsAction::CloseSelectedHunt => {
                             self.selected_hunt = None;
+                        }
+                        HuntsAction::StartEditHunt(index) => {
+                            self.editing_hunt_index = Some(index);
+                            self.editing_hunt = match self.all_hunts.get(index) {
+                                Some(hunt) => hunt.clone(),
+                                None => hunt::Hunt::default(),
+                            }
+                        }
+                        HuntsAction::StopEditHunt(save) => {
+                            if save {
+                                match self.db_upsert_edited_hunt() {
+                                    Ok(hunt) => {
+                                        self.all_hunts[self.editing_hunt_index.unwrap()] = hunt;
+                                    }
+                                    Err(()) => {}
+                                }
+                            }
+                            self.editing_hunt_index = None;
+                            self.editing_hunt = hunt::Hunt::default();
                         }
                         _ => {}
                     }

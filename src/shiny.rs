@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use diesel::prelude::*;
 
 use crate::data;
@@ -8,9 +8,9 @@ use std::error::Error;
 
 pub use crate::models::Shiny as DbShiny;
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Shiny {
-    pub id: i32,
+    pub id: Option<i32>,
     pub species: data::Species,
     pub gender: Option<i32>,
     pub name: Option<String>,
@@ -25,10 +25,28 @@ pub struct Shiny {
     pub hunt_id: Option<i32>,
 }
 
+#[derive(Debug, AsChangeset, Identifiable, Insertable)]
+#[diesel(table_name = crate::schema::shinies)]
+pub struct InsertableShiny {
+    pub id: Option<i32>,
+    pub species: i32,
+    pub gender: Option<i32>,
+    pub name: Option<String>,
+    pub total_encounters: Option<i32>,
+    pub phase_encounters: Option<i32>,
+    pub phase_number: Option<i32>,
+    pub found_time: Option<NaiveDateTime>,
+    pub version: Option<String>,
+    pub method: Option<String>,
+    pub place: Option<String>,
+    pub notes: Option<String>,
+    pub hunt_id: Option<i32>,
+}
+
 impl Shiny {
     pub fn from_db_shiny(db_shiny: DbShiny) -> Self {
         Self {
-            id: db_shiny.id,
+            id: Some(db_shiny.id),
             species: db_shiny.species.into(),
             gender: db_shiny.gender,
             name: db_shiny.name,
@@ -46,8 +64,8 @@ impl Shiny {
         }
     }
 
-    pub fn copy_into_db_shiny(&self) -> DbShiny {
-        DbShiny {
+    pub fn copy_into_insertable(&self) -> InsertableShiny {
+        InsertableShiny {
             id: self.id,
             species: self.species.into(),
             gender: self.gender,

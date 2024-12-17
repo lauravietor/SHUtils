@@ -1,6 +1,7 @@
 #[repr(i32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum Species {
+    #[default]
     Egg = 0,
     Bulbasaur,
     Ivysaur,
