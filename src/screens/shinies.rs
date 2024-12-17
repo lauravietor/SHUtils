@@ -1,4 +1,5 @@
 use crate::shiny::Shiny;
+use crate::theme::{card, navbar, side_view};
 use crate::State;
 
 use iced::alignment::{Horizontal, Vertical};
@@ -63,8 +64,8 @@ impl Shiny {
                                 })
                                 .size(20),
                                 text(match self.phase_encounters {
-                                    Some(count) => format!("{} rencontres", count),
-                                    None => "??? rencontres".into(),
+                                    Some(count) => format!("{}", count),
+                                    None => "???".into(),
                                 })
                                 .size(24),
                                 text(match self.phase_number {
@@ -130,15 +131,18 @@ impl Shiny {
             .on_press(ShiniesMessage::SelectShiny(index)),
         )
         .width(Length::Fill)
+        .style(card)
     }
 
     pub fn view_detailed(&self, index: usize) -> Container<ShiniesMessage> {
-        container(
+        container(scrollable(
             column![
                 row![
+                    horizontal_space(),
                     button("Modifier").on_press(ShiniesMessage::StartEditShiny(index)),
                     button("Fermer").on_press(ShiniesMessage::CloseSelectedShiny)
-                ],
+                ]
+                .spacing(8),
                 container(text("sprite here").width(100).height(100)),
                 make_row("Espèce :", self.species.to_string(), 16),
                 make_row(
@@ -190,8 +194,10 @@ impl Shiny {
             ]
             .spacing(12)
             .padding(16),
-        )
+        ))
         .width(Length::Fill)
+        .height(Length::Fill)
+        .style(side_view)
     }
 }
 
@@ -212,15 +218,17 @@ impl Shinies {
     }
 
     pub fn view<'a>(&'a self, state: &'a State) -> Element<ShiniesMessage> {
-        let header = row![
+        let header = container(row![
             text("Mes shinies").size(24),
             horizontal_space(),
             button("Nouveau shiny").on_press(ShiniesMessage::CreateShiny)
-        ];
+        ])
+        .style(navbar)
+        .padding(16);
 
         let build_columns = |size: Size| {
             let n_columns: usize = match size.width {
-                x if x < 400.0 => unreachable!(),
+                x if x < 400.0 => 1,
                 x if x < 800.0 => 1,
                 x if x < 1200.0 => 2,
                 x if x < 1600.0 => 3,
@@ -254,14 +262,18 @@ impl Shinies {
                 .get(index)
                 .map(|shiny| {
                     container(row![
-                        scrollable(column(
-                            state
-                                .all_shinies
-                                .iter()
-                                .enumerate()
-                                .map(|(index, shiny)| shiny.view_card(index).into())
-                        )),
-                        scrollable(shiny.view_detailed(index))
+                        scrollable(
+                            column(
+                                state
+                                    .all_shinies
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(index, shiny)| shiny.view_card(index).into())
+                            )
+                            .spacing(20)
+                            .padding(40)
+                        ),
+                        shiny.view_detailed(index)
                     ])
                     .width(Length::Fill)
                 })

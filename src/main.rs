@@ -17,6 +17,7 @@ use screens::{
     Counters, CountersMessage, Hunts, HuntsAction, HuntsMessage, ScreenType, Shinies,
     ShiniesMessage,
 };
+use theme::navbar;
 
 pub mod counter;
 pub mod data;
@@ -115,16 +116,17 @@ fn menu<'a>() -> Element<'a, MenuMessage>
 where
     MenuMessage: 'a,
 {
-    column![
+    container(column![
         text("Menu"),
         column![
             button("Hunts").on_press(MenuMessage::ChangeScreen(ScreenType::Hunts)),
             button("Shinies").on_press(MenuMessage::ChangeScreen(ScreenType::Shinies)),
             button("Counters").on_press(MenuMessage::ChangeScreen(ScreenType::Counters)),
         ]
-    ]
+    ])
     .height(Fill)
     .width(200)
+    .style(navbar)
     .into()
 }
 

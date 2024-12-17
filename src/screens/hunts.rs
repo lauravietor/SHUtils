@@ -1,5 +1,6 @@
 use crate::data::Species;
 use crate::hunt::Hunt;
+use crate::theme::{card, navbar, side_view};
 use crate::State;
 
 use iced::alignment::{Horizontal, Vertical};
@@ -123,16 +124,19 @@ impl Hunt {
             ])
             .on_press(HuntsMessage::SelectHunt(index)),
         )
+        .width(Length::Fill)
+        .style(card)
     }
 
     pub fn view_detailed(&self, index: usize) -> Container<HuntsMessage> {
-        container(
+        container(scrollable(
             column![
                 row![
                     horizontal_space(),
                     button("Modifier").on_press(HuntsMessage::StartEditHunt(index)),
                     button("Fermer").on_press(HuntsMessage::CloseSelectedHunt)
-                ],
+                ]
+                .spacing(8),
                 container(text("sprite here").width(100).height(100))
                     .width(Length::Fill)
                     .align_x(Horizontal::Center),
@@ -176,18 +180,21 @@ impl Hunt {
             ]
             .spacing(12)
             .padding(16),
-        )
+        ))
         .width(Length::Fill)
+        .height(Length::Fill)
+        .style(side_view)
     }
 
     pub fn view_editing(&self) -> Container<HuntsMessage> {
-        container(
+        container(scrollable(
             column![
                 row![
                     horizontal_space(),
                     button("Enregistrer").on_press(HuntsMessage::StopEditHunt(true)),
                     button("Annuler").on_press(HuntsMessage::StopEditHunt(false))
-                ],
+                ]
+                .spacing(8),
                 container(text("sprite here").width(100).height(100))
                     .width(Length::Fill)
                     .align_x(Horizontal::Center),
@@ -200,7 +207,8 @@ impl Hunt {
                     text_input("", &self.phase_encounters.to_string())
                         .size(16)
                         .on_input(HuntsMessage::EditPhaseEncounterCount)
-                ],
+                ]
+                .spacing(8),
                 row![
                     text("Rencontres (total) :")
                         .size(16)
@@ -212,7 +220,8 @@ impl Hunt {
                     )
                     .size(16)
                     .on_input(HuntsMessage::EditTotalEncounterCount)
-                ],
+                ]
+                .spacing(8),
                 row![
                     text("Phase actuelle :")
                         .size(16)
@@ -221,7 +230,8 @@ impl Hunt {
                     text_input("", &self.phase_count.to_string())
                         .size(16)
                         .on_input(HuntsMessage::EditPhaseCount)
-                ],
+                ]
+                .spacing(8),
                 row![
                     text("Version :")
                         .size(16)
@@ -230,7 +240,8 @@ impl Hunt {
                     text_input("", &self.version.clone().unwrap_or("".into()))
                         .size(16)
                         .on_input(HuntsMessage::EditVersion)
-                ],
+                ]
+                .spacing(8),
                 row![
                     text("Méthode :")
                         .size(16)
@@ -239,7 +250,8 @@ impl Hunt {
                     text_input("", &self.method.clone().unwrap_or("".into()))
                         .size(16)
                         .on_input(HuntsMessage::EditMethod)
-                ],
+                ]
+                .spacing(8),
                 row![
                     text("Zone :")
                         .size(16)
@@ -248,7 +260,8 @@ impl Hunt {
                     text_input("", &self.method.clone().unwrap_or("".into()))
                         .size(16)
                         .on_input(HuntsMessage::EditMethod)
-                ],
+                ]
+                .spacing(8),
                 make_row(
                     "Débutée le",
                     self.start_time
@@ -262,8 +275,10 @@ impl Hunt {
             ]
             .spacing(12)
             .padding(16),
-        )
+        ))
         .width(Length::Fill)
+        .height(Length::Fill)
+        .style(side_view)
     }
 }
 
@@ -286,15 +301,17 @@ impl Hunts {
     }
 
     pub fn view<'a>(&'a self, state: &'a State) -> Element<HuntsMessage> {
-        let header = row![
+        let header = container(row![
             text("Mes recherches").size(24),
             horizontal_space(),
             button("Nouvelle recherche").on_press(HuntsMessage::CreateHunt)
-        ];
+        ])
+        .style(navbar)
+        .padding(16);
 
         let build_columns = |size: Size| {
             let n_columns: usize = match size.width {
-                x if x < 400.0 => unreachable!(),
+                x if x < 400.0 => 1,
                 x if x < 800.0 => 1,
                 x if x < 1200.0 => 2,
                 x if x < 1600.0 => 3,
@@ -335,7 +352,7 @@ impl Hunts {
                             .spacing(20)
                             .padding(40)
                         ),
-                        scrollable(hunt.view_editing())
+                        hunt.view_editing()
                     ])
                     .width(Length::Fill)
                 })
@@ -361,7 +378,7 @@ impl Hunts {
                             .spacing(20)
                             .padding(40)
                         ),
-                        scrollable(hunt.view_detailed(index))
+                        hunt.view_detailed(index)
                     ])
                     .width(Length::Fill)
                 })

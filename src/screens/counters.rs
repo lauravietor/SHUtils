@@ -1,7 +1,10 @@
 use crate::counter::{Counter, CounterEditAction};
+use crate::theme::{card, counter_button, navbar};
 use crate::State;
 use iced::alignment::Horizontal;
-use iced::widget::{button, column, container, row, stack, svg, text, text_input, Container};
+use iced::widget::{
+    button, column, container, horizontal_space, row, stack, svg, text, text_input, Container,
+};
 use iced::{Element, Length};
 
 const COG_ICON: &[u8] = include_bytes!("../../assets/cog.svg");
@@ -36,7 +39,12 @@ impl Counter {
         let count_display = match self.hunt {
             Some(index) => {
                 if let Some(hunt) = state.all_hunts.get(index) {
-                    container(text(hunt.phase_encounters).size(48)).center(Length::Fill)
+                    container(column![
+                        text(hunt.target.to_string()).size(24),
+                        text(hunt.phase_encounters).size(32),
+                        text(format!("Phase {}", hunt.phase_count)).size(16)
+                    ])
+                    .center(Length::Fill)
                 } else {
                     container(text(self.count).size(48)).center(Length::Fill)
                 }
@@ -50,15 +58,17 @@ impl Counter {
                     count_display,
                     container(row![
                         container(
-                            button(container(text("-1")).center(100))
+                            button(container(text("-1").size(36)).center(100))
                                 .on_press(CountersMessage::Decrement(id))
                                 .padding(0)
+                                .style(counter_button)
                         )
                         .center_x(Length::Fill),
                         container(
-                            button(container(text(format!("+{}", self.inc))).center(100))
+                            button(container(text(format!("+{}", self.inc)).size(36)).center(100))
                                 .on_press(CountersMessage::Increment(id))
                                 .padding(0)
+                                .style(counter_button)
                         )
                         .center_x(Length::Fill),
                         container(
@@ -72,6 +82,7 @@ impl Counter {
                             )
                             .on_press(CountersMessage::ShinyFound(id))
                             .padding(0)
+                            .style(counter_button)
                         )
                         .center_x(Length::Fill)
                     ])
@@ -93,6 +104,7 @@ impl Counter {
             .align_x(Horizontal::Right)
         ])
         .padding(16)
+        .style(card)
     }
 
     pub fn edit_modal(&self, id: usize, _state: &State) -> Element<CountersMessage> {
@@ -117,6 +129,7 @@ impl Counter {
             .spacing(8)
             .padding(32),
         )
+        .style(card)
         .into()
     }
 }
@@ -159,19 +172,24 @@ impl Counters {
 
     pub fn view<'a>(&'a self, state: &'a State) -> Element<CountersMessage> {
         column![
-            row![
-                state.active_counters[0].view(0, state).center(Length::Fill),
-                state.active_counters[1].view(1, state).center(Length::Fill)
-            ]
-            .spacing(24),
-            row![
-                state.active_counters[2].view(2, state).center(Length::Fill),
-                state.active_counters[3].view(3, state).center(Length::Fill)
+            container(row![text("Mes compteurs").size(24), horizontal_space()])
+                .style(navbar)
+                .padding(16),
+            column![
+                row![
+                    state.active_counters[0].view(0, state).center(Length::Fill),
+                    state.active_counters[1].view(1, state).center(Length::Fill)
+                ]
+                .spacing(24),
+                row![
+                    state.active_counters[2].view(2, state).center(Length::Fill),
+                    state.active_counters[3].view(3, state).center(Length::Fill)
+                ]
+                .spacing(24)
             ]
             .spacing(24)
+            .padding(40)
         ]
-        .spacing(24)
-        .padding(40)
         .into()
     }
 }
