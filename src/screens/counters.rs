@@ -1,19 +1,23 @@
 use crate::counter::{Counter, CounterEditAction};
 use crate::State;
 use iced::alignment::Horizontal;
-use iced::widget::{button, column, container, row, stack, svg, text, Container};
+use iced::widget::{button, column, container, row, stack, svg, text, text_input, Container};
 use iced::{Element, Length};
 
 const COG_ICON: &[u8] = include_bytes!("../../assets/cog.svg");
 const STARS_ICON: &[u8] = include_bytes!("../../assets/stars.svg");
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum CountersMessage {
     Increment(usize),
     Decrement(usize),
     StartEditCounter(usize),
     StopEditCounter,
     ShinyFound(usize),
+    SelectHunt(usize),
+    UnsetHunt,
+    EditIncrement(String),
+    EditCount(String),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -22,7 +26,7 @@ pub enum CountersAction {
     Increment(usize),
     Decrement(usize),
     StartEditCounter(usize),
-    EditCounter(usize, CounterEditAction),
+    EditCounter(CounterEditAction),
     StopEditCounter,
     ShinyFound(usize),
 }
@@ -92,7 +96,28 @@ impl Counter {
     }
 
     pub fn edit_modal(&self, id: usize, _state: &State) -> Element<CountersMessage> {
-        container(text(format!("Editing counter {id}"))).into()
+        container(
+            column![
+                container(text(format!("Editing counter {id}"))).center_x(Length::Fill),
+                row![
+                    text("Recherche : "),
+                    text("Pas encore implémenté"),
+                    button(text("x")).on_press(CountersMessage::UnsetHunt)
+                ],
+                row![
+                    text("Incrément : "),
+                    text_input("1", &self.inc.to_string()).on_input(CountersMessage::EditIncrement)
+                ],
+                row![
+                    text("Chiffre : "),
+                    text_input("1234", &self.count.to_string())
+                        .on_input(CountersMessage::EditCount)
+                ]
+            ]
+            .spacing(8)
+            .padding(32),
+        )
+        .into()
     }
 }
 
@@ -108,6 +133,26 @@ impl Counters {
         match message {
             CountersMessage::Increment(id) => CountersAction::Increment(id),
             CountersMessage::Decrement(id) => CountersAction::Decrement(id),
+            CountersMessage::StartEditCounter(id) => CountersAction::StartEditCounter(id),
+            CountersMessage::StopEditCounter => CountersAction::StopEditCounter,
+            CountersMessage::SelectHunt(index) => {
+                CountersAction::EditCounter(CounterEditAction::SetHunt(index))
+            }
+            CountersMessage::UnsetHunt => CountersAction::EditCounter(CounterEditAction::UnsetHunt),
+            CountersMessage::EditIncrement(inc_str) => {
+                if let Ok(increment) = inc_str.parse::<i32>() {
+                    CountersAction::EditCounter(CounterEditAction::SetIncrement(increment))
+                } else {
+                    CountersAction::None
+                }
+            }
+            CountersMessage::EditCount(count_str) => {
+                if let Ok(count) = count_str.parse::<i32>() {
+                    CountersAction::EditCounter(CounterEditAction::SetCount(count))
+                } else {
+                    CountersAction::None
+                }
+            }
             _ => CountersAction::None,
         }
     }

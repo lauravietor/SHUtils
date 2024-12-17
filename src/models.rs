@@ -1,8 +1,7 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use serde::Serialize;
 
-#[derive(Debug, Queryable, Selectable, Identifiable, Serialize)]
+#[derive(Debug, Queryable, Selectable, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::schema::hunts)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Hunt {
@@ -20,7 +19,7 @@ pub struct Hunt {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize)]
+#[derive(Debug, Queryable, Selectable, Identifiable, Associations, AsChangeset)]
 #[diesel(table_name = crate::schema::shinies)]
 #[diesel(belongs_to(Hunt))]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]

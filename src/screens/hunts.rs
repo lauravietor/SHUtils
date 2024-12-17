@@ -1,4 +1,3 @@
-use crate::data::SPECIES_NAMES;
 use crate::hunt::Hunt;
 use crate::State;
 
@@ -55,7 +54,7 @@ impl Hunt {
                             container(text("sprite here").width(100).height(100))
                                 .align_right(Length::Fill),
                             column![
-                                text(SPECIES_NAMES[self.target as usize]).size(20),
+                                text(self.target.to_string()).size(20),
                                 text(self.phase_encounters).size(24),
                                 text(format!("Phase {}", self.phase_count)).size(16)
                             ]
@@ -124,7 +123,7 @@ impl Hunt {
                 container(text("sprite here").width(100).height(100))
                     .width(Length::Fill)
                     .align_x(Horizontal::Center),
-                make_row("Espèce :", SPECIES_NAMES[self.target as usize], 16),
+                make_row("Espèce :", self.target.to_string(), 16),
                 make_row("Rencontres (phase) :", self.phase_encounters, 16),
                 make_row(
                     "Rencontres (total) :",
@@ -204,16 +203,21 @@ impl Hunts {
                 x if x < 1600.0 => 3,
                 _ => 4,
             };
-            scrollable(row((0..n_columns).map(|i| {
-                column((i..state.all_hunts.len()).step_by(n_columns).map(|index| {
-                    state
-                        .all_hunts
-                        .get(index)
-                        .map(|hunt| hunt.view_card(index).into())
-                        .unwrap()
+            scrollable(
+                row((0..n_columns).map(|i| {
+                    column((i..state.all_hunts.len()).step_by(n_columns).map(|index| {
+                        state
+                            .all_hunts
+                            .get(index)
+                            .map(|hunt| hunt.view_card(index).into())
+                            .unwrap()
+                    }))
+                    .spacing(20)
+                    .into()
                 }))
-                .into()
-            })))
+                .spacing(20)
+                .padding(40),
+            )
             .into()
         };
 
@@ -223,13 +227,17 @@ impl Hunts {
                 .get(index)
                 .map(|hunt| {
                     container(row![
-                        scrollable(column(
-                            state
-                                .all_hunts
-                                .iter()
-                                .enumerate()
-                                .map(|(index, hunt)| hunt.view_card(index).into())
-                        )),
+                        scrollable(
+                            column(
+                                state
+                                    .all_hunts
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(index, hunt)| hunt.view_card(index).into())
+                            )
+                            .spacing(20)
+                            .padding(40)
+                        ),
                         scrollable(hunt.view_detailed(index))
                     ])
                     .width(Length::Fill)

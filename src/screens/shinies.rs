@@ -1,4 +1,3 @@
-use crate::data::SPECIES_NAMES;
 use crate::shiny::Shiny;
 use crate::State;
 
@@ -60,7 +59,7 @@ impl Shiny {
                                 text(if let Some(name) = self.name.clone() {
                                     name
                                 } else {
-                                    SPECIES_NAMES[self.species as usize].into()
+                                    self.species.to_string()
                                 })
                                 .size(20),
                                 text(match self.phase_encounters {
@@ -141,7 +140,7 @@ impl Shiny {
                     button("Fermer").on_press(ShiniesMessage::CloseSelectedShiny)
                 ],
                 container(text("sprite here").width(100).height(100)),
-                make_row("Espèce :", SPECIES_NAMES[self.species as usize], 16),
+                make_row("Espèce :", self.species.to_string(), 16),
                 make_row(
                     "Rencontres (phase) :",
                     self.phase_encounters
@@ -227,20 +226,25 @@ impl Shinies {
                 x if x < 1600.0 => 3,
                 _ => 4,
             };
-            scrollable(row((0..n_columns).map(|i| {
-                column(
-                    (i..state.all_shinies.len())
-                        .step_by(n_columns)
-                        .map(|index| {
-                            state
-                                .all_shinies
-                                .get(index)
-                                .map(|shiny| shiny.view_card(index).into())
-                                .unwrap()
-                        }),
-                )
-                .into()
-            })))
+            scrollable(
+                row((0..n_columns).map(|i| {
+                    column(
+                        (i..state.all_shinies.len())
+                            .step_by(n_columns)
+                            .map(|index| {
+                                state
+                                    .all_shinies
+                                    .get(index)
+                                    .map(|shiny| shiny.view_card(index).into())
+                                    .unwrap()
+                            }),
+                    )
+                    .spacing(20)
+                    .into()
+                }))
+                .spacing(20)
+                .padding(40),
+            )
             .into()
         };
 

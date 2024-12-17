@@ -2,10 +2,10 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 
-use iced::widget::{button, column, container, row, text};
-use iced::{Element, Fill, Task};
+use iced::widget::{button, center, column, container, mouse_area, opaque, row, stack, text};
+use iced::{Color, Element, Fill, Task};
 
-use diesel::Connection;
+use diesel::{Connection, RunQueryDsl};
 
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
@@ -64,12 +64,8 @@ fn main() -> iced::Result {
     })
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Message {
-    HuntSaved(usize),
-    ShinySaved(usize),
-    HuntDeleted(usize),
-    ShinyDeleted(usize),
     MenuMessage(MenuMessage),
     CountersMessage(CountersMessage),
     HuntsMessage(HuntsMessage),
@@ -128,6 +124,26 @@ where
 }
 
 impl State {
+    fn insert_or_update_db_hunt(&mut self, index: usize) {
+        if let Some(hunt) = self.all_hunts.get(index) {
+            let _result = diesel::update(schema::hunts::table)
+                .set(hunt.copy_into_db_hunt())
+                .execute(&mut self.db_connection);
+        }
+    }
+
+    fn delete_hunt(&mut self, index: usize) {}
+
+    fn insert_or_update_db_shiny(&mut self, index: usize) {
+        if let Some(shiny) = self.all_shinies.get(index) {
+            let _result = diesel::update(schema::shinies::table)
+                .set(shiny.copy_into_db_shiny())
+                .execute(&mut self.db_connection);
+        }
+    }
+
+    fn delete_shiny(&mut self, index: usize) {}
+
     fn new() -> (Self, Task<Message>) {
         let mut db_connection = establish_db_connection();
 
@@ -181,6 +197,7 @@ impl State {
                             let c = &mut self.active_counters[id];
                             if let Some(index) = c.hunt {
                                 c.increment(self.all_hunts.get_mut(index));
+                                self.insert_or_update_db_hunt(index);
                             } else {
                                 c.increment(None);
                             }
@@ -190,18 +207,30 @@ impl State {
                             let c = &mut self.active_counters[id];
                             if let Some(index) = c.hunt {
                                 c.decrement(self.all_hunts.get_mut(index));
+                                self.insert_or_update_db_hunt(index);
                             } else {
                                 c.decrement(None);
                             }
                             Task::none()
                         }
-                        CountersAction::EditCounter(id, edit_action) => {
-                            let c = &mut self.active_counters[id];
-                            if let Some(index) = c.hunt {
-                                c.perform(edit_action, self.all_hunts.get_mut(index));
-                            } else {
-                                c.perform(edit_action, None);
+                        CountersAction::EditCounter(edit_action) => {
+                            if let Some(id) = self.editing_counter {
+                                let c = &mut self.active_counters[id];
+                                if let Some(index) = c.hunt {
+                                    c.perform(edit_action, self.all_hunts.get_mut(index));
+                                    self.insert_or_update_db_hunt(index);
+                                } else {
+                                    c.perform(edit_action, None);
+                                }
                             }
+                            Task::none()
+                        }
+                        CountersAction::StartEditCounter(id) => {
+                            self.editing_counter = Some(id);
+                            Task::none()
+                        }
+                        CountersAction::StopEditCounter => {
+                            self.editing_counter = None;
                             Task::none()
                         }
                         _ => Task::none(),
@@ -252,6 +281,34 @@ impl State {
 
     fn view(&self) -> Element<Message> {
         let content = container(self.screen.view(self));
-        row![menu().map(Message::MenuMessage), content].into()
+        let modal: Option<Element<Message>> = self.editing_counter.map(|counter_id| {
+            self.active_counters[counter_id]
+                .edit_modal(counter_id, self)
+                .map(Message::CountersMessage)
+                .into()
+        });
+
+        match modal {
+            None => row![menu().map(Message::MenuMessage), content].into(),
+            Some(m) => stack![
+                row![menu().map(Message::MenuMessage), content],
+                opaque(
+                    mouse_area(center(opaque(m)).style(|_theme| {
+                        container::Style {
+                            background: Some(
+                                Color {
+                                    a: 0.8,
+                                    ..Color::BLACK
+                                }
+                                .into(),
+                            ),
+                            ..container::Style::default()
+                        }
+                    }))
+                    .on_press(Message::CountersMessage(CountersMessage::StopEditCounter))
+                )
+            ]
+            .into(),
+        }
     }
 }

@@ -1,3 +1,3 @@
-pub mod names;
+pub mod species;
 
-pub use names::SPECIES_NAMES;
+pub use species::Species;

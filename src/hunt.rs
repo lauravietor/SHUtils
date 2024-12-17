@@ -1,3 +1,4 @@
+use crate::data;
 use crate::models::{Hunt as DbHunt, Shiny as DbShiny};
 use crate::shiny::Shiny;
 
@@ -11,7 +12,7 @@ use std::error::Error;
 #[derive(Debug)]
 pub struct Hunt {
     pub id: i32,
-    pub target: i32,
+    pub target: data::Species,
     pub previous_encounters: i32,
     pub phase_encounters: i32,
     pub phase_count: i32,
@@ -29,7 +30,7 @@ impl Hunt {
     pub fn from_db_hunt_and_shinies(db_hunt: DbHunt, db_shinies: Vec<DbShiny>) -> Self {
         Self {
             id: db_hunt.id,
-            target: db_hunt.target,
+            target: db_hunt.target.into(),
             previous_encounters: db_hunt.previous_encounters,
             phase_encounters: db_hunt.phase_encounters,
             phase_count: db_hunt.phase_count,
@@ -54,7 +55,7 @@ impl Hunt {
     pub fn copy_into_db_hunt(&self) -> DbHunt {
         DbHunt {
             id: self.id,
-            target: self.target,
+            target: self.target.into(),
             previous_encounters: self.previous_encounters,
             phase_encounters: self.phase_encounters,
             phase_count: self.phase_count,
@@ -97,5 +98,16 @@ impl Hunt {
             .load(db)?;
 
         Ok(Hunt::from_db_hunt_and_shinies(db_hunt, hunt_shinies))
+    }
+}
+
+impl std::fmt::Display for Hunt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} - {}",
+            self.target,
+            self.place.clone().unwrap_or("Inconnue".into())
+        )
     }
 }
