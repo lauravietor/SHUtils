@@ -24,6 +24,7 @@ pub mod hunt;
 pub mod models;
 pub mod schema;
 pub mod shiny;
+pub mod theme;
 
 mod screens;
 
@@ -55,13 +56,15 @@ fn main() -> iced::Result {
     if let Err(err) = fs::create_dir_all(get_database_path().parent().unwrap()) {
         panic!("Creating database directory failed: {}", err);
     }
-    iced::application("SHUtils", State::update, State::view).run_with(|| {
-        let (mut state, task) = State::new();
-        if let Err(err) = run_migrations(&mut state.db_connection) {
-            panic!("Database upgrade failed: {}", err)
-        };
-        (state, task)
-    })
+    iced::application("SHUtils", State::update, State::view)
+        .theme(theme::make_theme)
+        .run_with(|| {
+            let (mut state, task) = State::new();
+            if let Err(err) = run_migrations(&mut state.db_connection) {
+                panic!("Database upgrade failed: {}", err)
+            };
+            (state, task)
+        })
 }
 
 #[derive(Debug, Clone)]
